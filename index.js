@@ -55,13 +55,15 @@ var handlers = {
 
       if (personName && activityName){
         this.emit(':tell', "Person is " + personName + ", activity is " + activityName);
+        listUpcomingEvents(personName, activityName);
       }
 
       else if (personName) {
-        this.emit(':tell', "Person is " + personName);
-      }
+        //this.emit(':tell', "Person is " + personName);
 
-      else{
+        this.emit(':tell', listUpcomingEvents(personName, ""));
+      }
+      else {
         this.emit(':tell', "Shit");
       }
 
@@ -85,3 +87,105 @@ var handlers = {
         this.emit(':tell', STOP_MESSAGE);
     }
 };
+
+// Client ID and API key from the Developer Console
+var CLIENT_ID = '654320273720-mfaji5bqc90len044dbr4n5s6tbqe5b6.apps.googleusercontent.com';
+
+// Array of API discovery doc URLs for APIs used by the quickstart
+var DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"];
+
+// Authorization scopes required by the API; multiple scopes can be
+// included, separated by spaces.
+var SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
+
+/**
+ *  On load, called to load the auth2 library and API client library.
+ */
+function handleClientLoad() {
+  gapi.load('client:auth2', initClient);
+}
+
+/**
+ *  Initializes the API client library and sets up sign-in state
+ *  listeners.
+ */
+function initClient() {
+  gapi.client.init({
+    discoveryDocs: DISCOVERY_DOCS,
+    clientId: CLIENT_ID,
+    scope: SCOPES
+  }).then(function () {
+    // Listen for sign-in state changes.
+    gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+
+    // Handle the initial sign-in state.
+    updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+    authorizeButton.onclick = handleAuthClick;
+    signoutButton.onclick = handleSignoutClick;
+  });
+}
+
+/**
+ * Print the summary and start datetime/date of the next ten events in
+ * the authorized user's calendar. If no events are found an
+ * appropriate message is printed.
+ */
+
+function listUpcomingEvents(name, activity) {
+  var cur = new Date().setHours(23, 59, 59);
+  var endTime = new Date(cur);
+  gapi.client.calendar.events.list({
+    'calendarId': 'primary',
+    'timeMin': (new Date()).toISOString(),
+    'timeMax': endTime.toISOString(),
+    'showDeleted': false,
+    'singleEvents': true,
+    'maxResults': 10,
+    'q': name,
+    'orderBy': 'startTime'
+  }).then(function(response) {
+    var events = response.result.items;
+    var jsonString = [];
+    if(activity == 'chore'){
+      var length = events.length;
+      for(var i = 0; i < length; i++){
+        var event = events[i];
+        var time = event.start.dateTime;
+        if (!time) {
+          time = event.start.date;
+        }
+        if (event.colorId == 9) { 
+          jsonString.push({"title" : event.summary, "description" : event.description, "date" : time, "type" : "chore"});
+
+        }
+      }
+    } else if(activity == 'event'){
+      var length = events.length;
+      for(var i = 0; i < length; i++){
+        var event = events[i];
+        var time = event.start.dateTime;
+        if (!time) {
+          time = event.start.date;
+        }
+        if (event.colorId == 10) { 
+          jsonString.push({"title" : event.summary, "description" : event.description, "date" : time, "type" : "event"});
+        }
+      }
+    } else {
+      var length = events.length;
+      for(var i = 0; i < length; i++){
+        var event = events[i];
+        var time = event.start.dateTime;
+        if (!time) {
+          time = event.start.date;
+        }
+        if (event.colorId == 9) { 
+          jsonString.push({"title" : event.summary, "description" : event.description, "date" : time, "type" : "chore"});
+        } else {
+          jsonString.push({"title" : event.summary, "description" : event.description, "date" : time, "type" : "event"});
+        }
+      }
+    }
+   return JSON.stringify(jsonString);
+  });
+}

@@ -71,8 +71,8 @@ function handleSignoutClick(event) {
  * appropriate message is printed.
  */
 
-function listUpcomingEvents(name) {
-   var cur = new Date().setHours(23, 59, 59);
+function listUpcomingEvents(name, activity) {
+  var cur = new Date().setHours(23, 59, 59);
   var endTime = new Date(cur);
   gapi.client.calendar.events.list({
     'calendarId': 'primary',
@@ -84,8 +84,34 @@ function listUpcomingEvents(name) {
     'q': name,
     'orderBy': 'startTime'
   }).then(function(response) {
-      var events = response.result.items;
-      var jsonString = [];
+    var events = response.result.items;
+    var jsonString = [];
+    if(activity == 'chore'){
+      var length = events.length;
+      for(var i = 0; i < length; i++){
+        var event = events[i];
+        var time = event.start.dateTime;
+        if (!time) {
+          time = event.start.date;
+        }
+        if (event.colorId == 9) { 
+          jsonString.push({"title" : event.summary, "description" : event.description, "date" : time, "type" : "chore"});
+
+        }
+      }
+    } else if(activity == 'event'){
+      var length = events.length;
+      for(var i = 0; i < length; i++){
+        var event = events[i];
+        var time = event.start.dateTime;
+        if (!time) {
+          time = event.start.date;
+        }
+        if (event.colorId == 10) { 
+          jsonString.push({"title" : event.summary, "description" : event.description, "date" : time, "type" : "event"});
+        }
+      }
+    } else {
       var length = events.length;
       for(var i = 0; i < length; i++){
         var event = events[i];
@@ -99,6 +125,7 @@ function listUpcomingEvents(name) {
           jsonString.push({"title" : event.summary, "description" : event.description, "date" : time, "type" : "event"});
         }
       }
-      appendPre(JSON.stringify(jsonString));
+    }
+   // appendPre(JSON.stringify(jsonString));
   });
 }
